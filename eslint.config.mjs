@@ -38,6 +38,7 @@ export default tseslint.config(
       'no-empty': 'warn',
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/require-await': 'off',
+      'no-extra-boolean-cast': 'off',
     },
   },
 )

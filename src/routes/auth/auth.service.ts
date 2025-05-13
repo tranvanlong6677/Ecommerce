@@ -1,11 +1,15 @@
 import { ConflictException, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common'
 import { HashingService } from 'src/shared/services/hashing.service'
-import { PrismaService } from 'src/shared/services/prisma.service'
 import { TokenService } from 'src/shared/services/token.service'
-import { isNotFoundPrismaError, isUniqueContraintPrismaError } from 'src/shared/helpers'
+import { generateOtp, isNotFoundPrismaError, isUniqueContraintPrismaError } from 'src/shared/helpers'
 import { RoleService } from './roles.service'
-import { RegisterBodyType } from './auth.model'
+import { RegisterBodyType, SendOTPBodyType } from './auth.model'
 import { AuthRepository } from './auth.repo'
+import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
+import { addMilliseconds } from 'date-fns'
+import envConfig from 'src/shared/config'
+import ms from 'ms'
+import { TypeOfVerificationCode } from 'src/shared/constants/auth.constants'
 
 @Injectable()
 export class AuthService {
@@ -14,10 +18,23 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly roleService: RoleService,
     private readonly authRepository: AuthRepository,
+    private readonly sharedUserRepository: SharedUserRepository,
   ) {}
 
   async register(body: RegisterBodyType) {
     try {
+      const verificationCode = await this.authRepository.findUniqueVerificationCode({
+        email: body.email,
+        code: body.code,
+        type: TypeOfVerificationCode.REGISTER,
+      })
+      if (!verificationCode) {
+        throw new UnprocessableEntityException([{ message: 'Mã OTP không hợp lệ', path: 'code' }])
+      }
+
+      if (verificationCode.expiresAt < new Date()) {
+        throw new UnprocessableEntityException([{ message: 'Mã OTP đã hết hạn', path: 'code' }])
+      }
       const clientRoleId = await this.roleService.getClientRoleId()
       const hashedPassword = await this.hashingService.hashPassword(body.password)
 
@@ -37,6 +54,30 @@ export class AuthService {
       console.log('>>> Register error: ', error)
       throw error
     }
+  }
+
+  async sendOtp(body: SendOTPBodyType) {
+    // 1:Kiểm tra email đã tồn tại hay chưa
+    const user = await this.sharedUserRepository.findUnique({ email: body.email })
+    if (!!user) {
+      throw new UnprocessableEntityException([
+        {
+          path: 'email',
+          message: 'Email đã tồn tại',
+        },
+      ])
+    }
+    // 2:Tạo mã OTP
+    const code = generateOtp()
+    const VerificationCode = await this.authRepository.createVerificationCode({
+      email: body.email,
+      type: body.type,
+      code: code + '',
+      expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPIRES_IN)),
+    })
+
+    // 3: Gửi mã OTP
+    return VerificationCode
   }
 
   // async login(body: any) {
