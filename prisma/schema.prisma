@@ -33,6 +33,7 @@ model User {
   password    String  @db.VarChar(500)
   phoneNumber String  @db.VarChar(50)
   avatar      String? @db.VarChar(1000)
+  devices      Device[]   
 
   // Này có thể dùng để thực hiện chức năng quên mật khẩu, đăng nhập 2 bước
   totpSecret                  String?               @unique @db.VarChar(1000)
@@ -118,16 +119,28 @@ model VerificationCode {
 
   expiresAt DateTime
   createdAt DateTime @default(now())
-
   @@index([email, code, type])
   @@index([expiresAt])
+}
+
+model Device {
+  id           Int           @id @default(autoincrement())
+  userId       Int
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  userAgent    String
+  ip           String
+  lastActive   DateTime      @updatedAt // Thay updatedAt bằng lastActive cho ý nghĩa rõ hơn
+  createdAt    DateTime      @default(now())
+  isActive     Boolean       @default(true) // Trạng thái thiết bị (đang login hay đã logout)
+  refreshTokens RefreshToken[] // Liên kết 1-n với RefreshToken
 }
 
 model RefreshToken {
   token  String @unique @db.VarChar(1000)
   userId Int
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
+  deviceId  Int      // Foreign key tới Device
+  device    Device   @relation(fields: [deviceId], references: [id],  onDelete: Cascade, onUpdate: NoAction)
   expiresAt DateTime
   createdAt DateTime @default(now())
 
