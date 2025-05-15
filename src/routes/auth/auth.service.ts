@@ -3,7 +3,7 @@ import { HashingService } from 'src/shared/services/hashing.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { generateOtp, isUniqueContraintPrismaError } from 'src/shared/helpers'
 import { RoleService } from './roles.service'
-import { RegisterBodyType, SendOTPBodyType } from './auth.model'
+import { LoginBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model'
 import { AuthRepository } from './auth.repo'
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
 import { addMilliseconds } from 'date-fns'
@@ -11,12 +11,14 @@ import envConfig from 'src/shared/config'
 import ms from 'ms'
 import { TypeOfVerificationCode } from 'src/shared/constants/auth.constants'
 import { EmailService } from 'src/shared/services/email.service'
+import { PrismaService } from 'src/shared/services/prisma.service'
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly hashingService: HashingService,
     private readonly tokenService: TokenService,
+    private readonly prismaService: PrismaService,
     private readonly roleService: RoleService,
     private readonly authRepository: AuthRepository,
     private readonly sharedUserRepository: SharedUserRepository,
@@ -83,39 +85,64 @@ export class AuthService {
     return VerificationCode
   }
 
-  // async login(body: any) {
-  //   const user = await this.prismaService.user.findUnique({
-  //     where: {
-  //       email: body.email,
-  //     },
-  //   })
-  //   if (!user) {
-  //     throw new UnauthorizedException('Account is not exist')
-  //   }
-  //   const isPasswordMatch = await this.hashingService.compare(body.password, user.password)
-  //   if (!isPasswordMatch) {
-  //     throw new UnprocessableEntityException([{ field: 'password', error: 'Password is incorrect' }])
-  //   }
-  //   const tokens = await this.generateTokens({ userId: user.id })
-  //   return tokens
-  // }
+  async login(
+    body: LoginBodyType & {
+      userAgent: string
+      ip: string
+    },
+  ) {
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email })
 
-  // async generateTokens(payload: { userId: number }) {
-  //   const [accessToken, refreshToken] = await Promise.all([
-  //     this.tokenService.signAccessToken(payload),
-  //     this.tokenService.signRefreshToken(payload),
-  //   ])
+    if (!user) {
+      throw new UnprocessableEntityException([
+        {
+          path: 'email',
+          message: 'Email đã tồn tại',
+        },
+      ])
+    }
+    const isPasswordMatch = await this.hashingService.compare(body.password, user.password)
+    if (!isPasswordMatch) {
+      throw new UnprocessableEntityException([{ field: 'password', error: 'Password is incorrect' }])
+    }
 
-  //   const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
-  //   await this.prismaService.refreshToken.create({
-  //     data: {
-  //       token: refreshToken,
-  //       userId: decodedRefreshToken.userId,
-  //       expiresAt: new Date(decodedRefreshToken.exp * 1000),
-  //     },
-  //   })
-  //   return { accessToken, refreshToken }
-  // }
+    const device = await this.authRepository.createDevice({
+      userId: user.id,
+      userAgent: body.userAgent,
+      ip: body.ip,
+    })
+
+    const tokens = await this.generateTokens({
+      userId: user.id,
+      deviceId: device.id,
+      roleId: user.roleId,
+      roleName: user.role.name,
+    })
+    return tokens
+  }
+
+  async generateTokens(payload: { userId: number; deviceId: number; roleId: number; roleName: string }) {
+    const { userId, deviceId, roleId, roleName } = payload
+    const [accessToken, refreshToken] = await Promise.all([
+      this.tokenService.signAccessToken({
+        userId,
+        deviceId,
+        roleId,
+        roleName,
+      }),
+      this.tokenService.signRefreshToken(payload),
+    ])
+
+    const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
+    await this.authRepository.createRefreshToken({
+      token: refreshToken,
+      userId: decodedRefreshToken.userId,
+      expiresAt: new Date(decodedRefreshToken.exp * 1000),
+      deviceId,
+    })
+
+    return { accessToken, refreshToken }
+  }
 
   // async refreshToken(refreshToken: string) {
   //   try {

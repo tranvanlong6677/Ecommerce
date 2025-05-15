@@ -1,13 +1,18 @@
 import { Injectable } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import envConfig from '../config'
-import { TokenPayload } from '../types/jwt.types'
+import {
+  AccessTokenCreatePayload,
+  RefreshTokenCreatePayload,
+  AccessTokenPayload,
+  RefreshTokenPayload,
+} from '../types/jwt.types'
 
 @Injectable()
 export class TokenService {
   constructor(private readonly jwtService: JwtService) {}
 
-  signAccessToken(payload: { userId: number }) {
+  signAccessToken(payload: AccessTokenCreatePayload) {
     return this.jwtService.sign(payload, {
       secret: envConfig.ACCESS_TOKEN_SECRET,
       expiresIn: envConfig.ACCESS_TOKEN_EXPIRES_IN,
@@ -15,7 +20,7 @@ export class TokenService {
     })
   }
 
-  signRefreshToken(payload: { userId: number }) {
+  signRefreshToken(payload: RefreshTokenCreatePayload) {
     return this.jwtService.sign(payload, {
       secret: envConfig.REFRESH_TOKEN_SECRET,
       expiresIn: envConfig.REFRESH_TOKEN_EXPIRES_IN,
@@ -23,13 +28,13 @@ export class TokenService {
     })
   }
 
-  verifyAccessToken(accessToken: string): Promise<TokenPayload> {
+  verifyAccessToken(accessToken: string): Promise<AccessTokenPayload> {
     return this.jwtService.verifyAsync(accessToken, {
       secret: envConfig.ACCESS_TOKEN_SECRET,
     })
   }
 
-  verifyRefreshToken(refreshToken: string): Promise<TokenPayload> {
+  verifyRefreshToken(refreshToken: string): Promise<RefreshTokenPayload> {
     return this.jwtService.verifyAsync(refreshToken, {
       secret: envConfig.REFRESH_TOKEN_SECRET,
     })

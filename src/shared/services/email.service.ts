@@ -25,7 +25,6 @@ export class EmailService {
     })
 
     if (error) {
-      console.log('<>>>>> check error', error)
       throw new UnprocessableEntityException([
         {
           message: 'Gửi mã OTP thất bại',

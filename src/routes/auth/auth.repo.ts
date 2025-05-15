@@ -3,7 +3,7 @@ import { HashingService } from 'src/shared/services/hashing.service'
 import { PrismaService } from 'src/shared/services/prisma.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { RoleService } from './roles.service'
-import { RegisterBodyType, VerificationCodeType } from './auth.model'
+import { DeviceType, RegisterBodyType, RoleType, VerificationCodeType } from './auth.model'
 import { UserType } from 'src/shared/models/shared-user.model'
 import { TypeOfVerificationCodeType } from 'src/shared/constants/auth.constants'
 
@@ -47,6 +47,31 @@ export class AuthRepository {
   ): Promise<VerificationCodeType | null> {
     return this.prismaService.verificationCode.findUnique({
       where: uniqueValue,
+    })
+  }
+
+  createRefreshToken(data: { token: string; userId: number; expiresAt: Date; deviceId: number }) {
+    return this.prismaService.refreshToken.create({
+      data,
+    })
+  }
+
+  createDevice(
+    data: Pick<DeviceType, 'userId' | 'userAgent' | 'ip'> & Partial<Pick<DeviceType, 'lastActive' | 'isActive'>>,
+  ) {
+    return this.prismaService.device.create({
+      data,
+    })
+  }
+
+  findUniqueUserIncludeRole(
+    uniqueValue: { email: string } | { id: number },
+  ): Promise<(UserType & { role: RoleType }) | null> {
+    return this.prismaService.user.findUnique({
+      where: uniqueValue,
+      include: {
+        role: true,
+      },
     })
   }
 }
