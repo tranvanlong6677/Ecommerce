@@ -1,9 +1,15 @@
-import { ConflictException, Injectable, UnprocessableEntityException } from '@nestjs/common'
+import {
+  ConflictException,
+  HttpException,
+  Injectable,
+  UnauthorizedException,
+  UnprocessableEntityException,
+} from '@nestjs/common'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { TokenService } from 'src/shared/services/token.service'
-import { generateOtp, isUniqueContraintPrismaError } from 'src/shared/helpers'
+import { generateOtp, isNotFoundPrismaError, isUniqueContraintPrismaError } from 'src/shared/helpers'
 import { RoleService } from './roles.service'
-import { LoginBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model'
+import { LoginBodyType, RefreshTokenBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model'
 import { AuthRepository } from './auth.repo'
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
 import { addMilliseconds } from 'date-fns'
@@ -144,63 +150,61 @@ export class AuthService {
     return { accessToken, refreshToken }
   }
 
-  // async refreshToken(refreshToken: string) {
-  //   try {
-  //     const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
-  //     if (decodedRefreshToken.exp < Date.now() / 1000) {
-  //       throw new UnauthorizedException('Refresh token expired')
-  //     }
+  async refreshToken({ refreshToken, userAgent, ip }: RefreshTokenBodyType & { userAgent: string; ip: string }) {
+    try {
+      // 1: Kiểm tra xem refresh token có hợp lệ không ( đã hết hạn chưa, có User nào dùng refresh token này không)
+      const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
+      if (decodedRefreshToken.exp < Date.now() / 1000) {
+        throw new UnauthorizedException('Refresh token expired')
+      }
 
-  //     const user = await this.prismaService.user.findUnique({
-  //       where: {
-  //         id: decodedRefreshToken.userId,
-  //       },
-  //     })
+      const user = await this.authRepository.findUniqueUserIncludeRole({
+        id: decodedRefreshToken.userId,
+      })
 
-  //     if (!user) {
-  //       throw new UnauthorizedException('Refresh token is not valid')
-  //     }
+      if (!user) {
+        throw new UnauthorizedException('Refresh token is not valid')
+      }
 
-  //     const checkExistRefreshToken = await this.prismaService.refreshToken.findUnique({
-  //       where: {
-  //         token: refreshToken,
-  //       },
-  //     })
+      // 2:Kiểm tra refresh token có trong database hay không
+      const refreshTokenInDb = await this.authRepository.findUniqueRefreshTokenIncludeUserRole({
+        token: refreshToken,
+      })
+      if (!refreshTokenInDb) {
+        throw new UnauthorizedException('Refresh token has been revoked')
+      }
+      // 3: Update device
+      const {
+        deviceId,
+        user: {
+          id: userId,
+          roleId,
+          role: { name: roleName },
+        },
+      } = refreshTokenInDb
+      const $updateDevice = this.authRepository.updateDevice({ deviceId, data: {} })
 
-  //     if (!checkExistRefreshToken) {
-  //       throw new UnauthorizedException('Refresh token has been revoked')
-  //     }
+      // 4: Xóa RT cũ
+      const $deleteRefreshToken = this.authRepository.deleteRefreshToken(refreshToken)
 
-  //     const tokens = await this.generateTokens({ userId: decodedRefreshToken.userId })
-  //     await this.prismaService.refreshToken.delete({
-  //       where: {
-  //         token: refreshToken,
-  //       },
-  //     })
+      // 5: Tạo token mới
+      const $tokens = this.generateTokens({
+        userId,
+        roleId,
+        roleName,
+        deviceId,
+      })
 
-  //     // await this.prismaService.$transaction([
-  //     //   this.prismaService.refreshToken.deleteMany({
-  //     //     where: {
-  //     //       token: refreshToken,
-  //     //     },
-  //     //   }),
-  //     //   this.prismaService.refreshToken.create({
-  //     //     data: {
-  //     //       token: tokens.refreshToken,
-  //     //       userId: decodedRefreshToken.userId,
-  //     //       expiresAt: new Date(decodedRefreshToken.exp * 1000),
-  //     //     },
-  //     //   }),
-  //     // ])
+      const [, , tokens] = await Promise.all([$updateDevice, $deleteRefreshToken, $tokens])
 
-  //     return tokens
-  //   } catch (error) {
-  //     if (isNotFoundPrismaError(error)) {
-  //       throw new UnauthorizedException('Refresh token has been revoked')
-  //     }
-  //     throw new UnauthorizedException()
-  //   }
-  // }
+      return tokens
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error
+      }
+      throw new UnauthorizedException()
+    }
+  }
 
   // async logout(refreshToken: string) {
   //   try {

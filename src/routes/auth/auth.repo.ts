@@ -3,7 +3,7 @@ import { HashingService } from 'src/shared/services/hashing.service'
 import { PrismaService } from 'src/shared/services/prisma.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { RoleService } from './roles.service'
-import { DeviceType, RegisterBodyType, RoleType, VerificationCodeType } from './auth.model'
+import { DeviceType, RefreshTokenType, RegisterBodyType, RoleType, VerificationCodeType } from './auth.model'
 import { UserType } from 'src/shared/models/shared-user.model'
 import { TypeOfVerificationCodeType } from 'src/shared/constants/auth.constants'
 
@@ -71,6 +71,43 @@ export class AuthRepository {
       where: uniqueValue,
       include: {
         role: true,
+      },
+    })
+  }
+
+  findUniqueRefreshTokenIncludeUserRole(uniqueValue: { token: string }): Promise<
+    | (RefreshTokenType & {
+        user: UserType & {
+          role: RoleType
+        }
+      })
+    | null
+  > {
+    return this.prismaService.refreshToken.findUnique({
+      where: uniqueValue,
+      include: {
+        user: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    })
+  }
+
+  updateDevice({ deviceId, data }: { deviceId: number; data: Partial<DeviceType> }): Promise<DeviceType> {
+    return this.prismaService.device.update({
+      where: {
+        id: deviceId,
+      },
+      data,
+    })
+  }
+
+  deleteRefreshToken(token: string): Promise<RefreshTokenType> {
+    return this.prismaService.refreshToken.delete({
+      where: {
+        token,
       },
     })
   }
