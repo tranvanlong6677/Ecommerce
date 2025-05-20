@@ -1,5 +1,5 @@
 import { SetMetadata, createParamDecorator, ExecutionContext } from '@nestjs/common'
-import { AuthTypeType, ConditionGuardType, REQUEST_USER_KEY } from '../constants/auth.constants'
+import { AuthType, AuthTypeType, ConditionGuardType, REQUEST_USER_KEY } from '../constants/auth.constants'
 import { AccessTokenPayload } from '../types/jwt.types'
 
 export const AUTH_TYPE_KEY = 'authType'
@@ -20,3 +20,5 @@ export const UserAgent = createParamDecorator((data: unknown, ctx: ExecutionCont
   const request = ctx.switchToHttp().getRequest()
   return request.headers['user-agent']
 })
+
+export const IsPublic = () => Auth([AuthType.NONE])
