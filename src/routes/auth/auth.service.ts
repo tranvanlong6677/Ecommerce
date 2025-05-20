@@ -9,7 +9,7 @@ import { HashingService } from 'src/shared/services/hashing.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { generateOtp, isNotFoundPrismaError, isUniqueContraintPrismaError } from 'src/shared/helpers'
 import { RoleService } from './roles.service'
-import { LoginBodyType, RefreshTokenBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model'
+import { LoginBodyType, LogoutBodyType, RefreshTokenBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model'
 import { AuthRepository } from './auth.repo'
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
 import { addMilliseconds } from 'date-fns'
@@ -182,7 +182,7 @@ export class AuthService {
           role: { name: roleName },
         },
       } = refreshTokenInDb
-      const $updateDevice = this.authRepository.updateDevice({ deviceId, data: {} })
+      const $updateDevice = this.authRepository.updateDevice({ deviceId, data: { ip, userAgent } })
 
       // 4: Xóa RT cũ
       const $deleteRefreshToken = this.authRepository.deleteRefreshToken(refreshToken)
@@ -206,26 +206,30 @@ export class AuthService {
     }
   }
 
-  // async logout(refreshToken: string) {
-  //   try {
-  //     // Kiểm tra refresh token có hợp lệ hay không
-  //     await this.tokenService.verifyRefreshToken(refreshToken)
+  async logout({ refreshToken }: LogoutBodyType) {
+    try {
+      // Kiểm tra refresh token có hợp lệ hay không
+      await this.tokenService.verifyRefreshToken(refreshToken)
 
-  //     // Xóa refresh token trong DB
-  //     await this.prismaService.refreshToken.delete({
-  //       where: {
-  //         token: refreshToken,
-  //       },
-  //     })
+      // Xóa refresh token trong DB
+      const deletedToken = await this.authRepository.deleteRefreshToken(refreshToken)
 
-  //     return {
-  //       message: 'Logout successfully',
-  //     }
-  //   } catch (error) {
-  //     if (isNotFoundPrismaError(error)) {
-  //       throw new UnauthorizedException('Refresh token has been revoke')
-  //     }
-  //     throw new UnauthorizedException()
-  //   }
-  // }
+      // Cập nhật device đã logout
+      await this.authRepository.updateDevice({
+        deviceId: deletedToken.deviceId,
+        data: {
+          isActive: false,
+        },
+      })
+
+      return {
+        message: 'Logout successfully',
+      }
+    } catch (error) {
+      if (isNotFoundPrismaError(error)) {
+        throw new UnauthorizedException('Refresh token has been revoke')
+      }
+      throw new UnauthorizedException()
+    }
+  }
 }
