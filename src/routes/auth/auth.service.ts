@@ -17,14 +17,12 @@ import envConfig from 'src/shared/config'
 import ms from 'ms'
 import { TypeOfVerificationCode } from 'src/shared/constants/auth.constants'
 import { EmailService } from 'src/shared/services/email.service'
-import { PrismaService } from 'src/shared/services/prisma.service'
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly hashingService: HashingService,
     private readonly tokenService: TokenService,
-    private readonly prismaService: PrismaService,
     private readonly roleService: RoleService,
     private readonly authRepository: AuthRepository,
     private readonly sharedUserRepository: SharedUserRepository,

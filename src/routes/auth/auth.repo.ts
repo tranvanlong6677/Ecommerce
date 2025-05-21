@@ -1,28 +1,31 @@
 import { Injectable } from '@nestjs/common'
-import { HashingService } from 'src/shared/services/hashing.service'
 import { PrismaService } from 'src/shared/services/prisma.service'
-import { TokenService } from 'src/shared/services/token.service'
-import { RoleService } from './roles.service'
-import { DeviceType, RefreshTokenType, RegisterBodyType, RoleType, VerificationCodeType } from './auth.model'
+import { DeviceType, RefreshTokenType, RoleType, VerificationCodeType } from './auth.model'
 import { UserType } from 'src/shared/models/shared-user.model'
 import { TypeOfVerificationCodeType } from 'src/shared/constants/auth.constants'
 
 @Injectable()
 export class AuthRepository {
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly hashingService: HashingService,
-    private readonly tokenService: TokenService,
-    private readonly roleService: RoleService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
   createUser(
-    user: Omit<RegisterBodyType, 'confirmPassword' | 'code'> & Pick<UserType, 'roleId'>,
+    user: Pick<UserType, 'email' | 'name' | 'roleId' | 'password' | 'phoneNumber'>,
   ): Promise<Omit<UserType, 'password' | 'totpSecret'>> {
     return this.prismaService.user.create({
       data: user,
       omit: {
         password: true,
         totpSecret: true,
+      },
+    })
+  }
+
+  createUserIncludeRole(
+    user: Pick<UserType, 'email' | 'name' | 'roleId' | 'password' | 'phoneNumber' | 'avatar'>,
+  ): Promise<(UserType & { role: RoleType }) | null> {
+    return this.prismaService.user.create({
+      data: user,
+      include: {
+        role: true,
       },
     })
   }
