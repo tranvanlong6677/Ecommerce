@@ -8,6 +8,7 @@ import {
   RefreshTokenResSchema,
   LogoutBodySchema,
   RefreshTokenBodySchema,
+  GetAuthorizationUrlResSchema,
 } from '../auth.model'
 
 export class RegisterBodyDto extends createZodDto(RegisterBodySchema) {}
@@ -18,3 +19,4 @@ export class LoginResDto extends createZodDto(LoginResSchema) {}
 export class RefreshTokenBodyDto extends createZodDto(RefreshTokenBodySchema) {}
 export class RefreshTokenResDto extends createZodDto(RefreshTokenResSchema) {}
 export class LogoutBodyDto extends createZodDto(LogoutBodySchema) {}
+export class GetAuthorizationUrlResDto extends createZodDto(GetAuthorizationUrlResSchema) {}
