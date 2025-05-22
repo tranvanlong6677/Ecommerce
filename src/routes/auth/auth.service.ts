@@ -1,22 +1,35 @@
-import {
-  ConflictException,
-  HttpException,
-  Injectable,
-  UnauthorizedException,
-  UnprocessableEntityException,
-} from '@nestjs/common'
+import { HttpException, Injectable } from '@nestjs/common'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { TokenService } from 'src/shared/services/token.service'
 import { generateOtp, isNotFoundPrismaError, isUniqueContraintPrismaError } from 'src/shared/helpers'
 import { RoleService } from './roles.service'
-import { LoginBodyType, LogoutBodyType, RefreshTokenBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model'
+import {
+  ChangePasswordBodyType,
+  ForgotPasswordBodyType,
+  LoginBodyType,
+  LogoutBodyType,
+  RefreshTokenBodyType,
+  RegisterBodyType,
+  SendOTPBodyType,
+} from './auth.model'
 import { AuthRepository } from './auth.repo'
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
 import { addMilliseconds } from 'date-fns'
 import envConfig from 'src/shared/config'
 import ms from 'ms'
-import { TypeOfVerificationCode } from 'src/shared/constants/auth.constants'
+import { TypeOfVerificationCode, TypeOfVerificationCodeType } from 'src/shared/constants/auth.constants'
 import { EmailService } from 'src/shared/services/email.service'
+import {
+  EmailAlreadyExistsException,
+  InvalidEmailException,
+  InvalidOTPException,
+  InvalidRefreshTokenException,
+  OTPExpiredException,
+  PasswordNotMatchException,
+  PasswordNotTrueException,
+  RefreshTokenExpiredException,
+  UnauthorizedExceptionCustom,
+} from './error.model'
 
 @Injectable()
 export class AuthService {
@@ -31,32 +44,32 @@ export class AuthService {
 
   async register(body: RegisterBodyType) {
     try {
-      const verificationCode = await this.authRepository.findUniqueVerificationCode({
-        email: body.email,
+      await this.validateVerificationCode({
         code: body.code,
         type: TypeOfVerificationCode.REGISTER,
+        email: body.email,
       })
-      if (!verificationCode) {
-        throw new UnprocessableEntityException([{ message: 'Mã OTP không hợp lệ', path: 'code' }])
-      }
-
-      if (verificationCode.expiresAt < new Date()) {
-        throw new UnprocessableEntityException([{ message: 'Mã OTP đã hết hạn', path: 'code' }])
-      }
       const clientRoleId = await this.roleService.getClientRoleId()
       const hashedPassword = await this.hashingService.hashPassword(body.password)
-
-      return await this.authRepository.createUser({
-        name: body.name,
-        password: hashedPassword,
-        email: body.email,
-        roleId: clientRoleId,
-        phoneNumber: body.phoneNumber,
-      })
+      const [user] = await Promise.all([
+        await this.authRepository.createUser({
+          name: body.name,
+          password: hashedPassword,
+          email: body.email,
+          roleId: clientRoleId,
+          phoneNumber: body.phoneNumber,
+        }),
+        await this.authRepository.deleteVerificationCode({
+          email: body.email,
+          type: TypeOfVerificationCode.REGISTER,
+          code: body.code,
+        }),
+      ])
+      return user
     } catch (error) {
       if (isUniqueContraintPrismaError(error)) {
         console.log(error)
-        throw new ConflictException('Email already exists')
+        throw EmailAlreadyExistsException
       }
 
       console.log('>>> Register error: ', error)
@@ -67,13 +80,11 @@ export class AuthService {
   async sendOtp(body: SendOTPBodyType) {
     // 1:Kiểm tra email đã tồn tại hay chưa
     const user = await this.sharedUserRepository.findUnique({ email: body.email })
-    if (!!user) {
-      throw new UnprocessableEntityException([
-        {
-          path: 'email',
-          message: 'Email đã tồn tại',
-        },
-      ])
+    if (body.type === TypeOfVerificationCode.REGISTER && user) {
+      throw EmailAlreadyExistsException
+    }
+    if (body.type === TypeOfVerificationCode.FORGOT_PASSWORD && !user) {
+      throw InvalidEmailException
     }
     // 2:Tạo mã OTP
     const code = generateOtp()
@@ -100,18 +111,12 @@ export class AuthService {
     const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email })
 
     if (!user) {
-      throw new UnprocessableEntityException([
-        {
-          path: 'email',
-          message: 'Email đã tồn tại',
-        },
-      ])
+      throw EmailAlreadyExistsException
     }
     const isPasswordMatch = await this.hashingService.compare(body.password, user.password)
     if (!isPasswordMatch) {
-      throw new UnprocessableEntityException([{ field: 'password', error: 'Password is incorrect' }])
+      throw PasswordNotTrueException
     }
-
     const device = await this.authRepository.createDevice({
       userId: user.id,
       userAgent: body.userAgent,
@@ -155,7 +160,7 @@ export class AuthService {
       // 1: Kiểm tra xem refresh token có hợp lệ không ( đã hết hạn chưa, có User nào dùng refresh token này không)
       const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken)
       if (decodedRefreshToken.exp < Date.now() / 1000) {
-        throw new UnauthorizedException('Refresh token expired')
+        throw RefreshTokenExpiredException
       }
 
       const user = await this.authRepository.findUniqueUserIncludeRole({
@@ -163,7 +168,7 @@ export class AuthService {
       })
 
       if (!user) {
-        throw new UnauthorizedException('Refresh token is not valid')
+        throw InvalidRefreshTokenException
       }
 
       // 2:Kiểm tra refresh token có trong database hay không
@@ -171,7 +176,7 @@ export class AuthService {
         token: refreshToken,
       })
       if (!refreshTokenInDb) {
-        throw new UnauthorizedException('Refresh token has been revoked')
+        throw RefreshTokenExpiredException
       }
       // 3: Update device
       const {
@@ -202,7 +207,7 @@ export class AuthService {
       if (error instanceof HttpException) {
         throw error
       }
-      throw new UnauthorizedException()
+      throw UnauthorizedExceptionCustom
     }
   }
 
@@ -227,9 +232,80 @@ export class AuthService {
       }
     } catch (error) {
       if (isNotFoundPrismaError(error)) {
-        throw new UnauthorizedException('Refresh token has been revoke')
+        throw RefreshTokenExpiredException
       }
-      throw new UnauthorizedException()
+      throw UnauthorizedExceptionCustom
     }
+  }
+
+  async forgotPassword(body: ForgotPasswordBodyType) {
+    // 1: Kiểm tra email có tồn tại trong DB hay không
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email })
+    if (!user) {
+      throw InvalidEmailException
+    }
+
+    // 2:Kiểm tra xem mã OTP có hợp lệ hay không
+    await this.validateVerificationCode({
+      code: body.code,
+      type: TypeOfVerificationCode.FORGOT_PASSWORD,
+      email: body.email,
+    })
+    // 3:Cập nhật password và xóa OTP
+    const hashedPassword = await this.hashingService.hashPassword(body.password)
+    await Promise.all([
+      await this.authRepository.updateUser(
+        { id: user.id },
+        {
+          password: hashedPassword,
+        },
+      ),
+
+      await this.authRepository.deleteVerificationCode({
+        email: body.email,
+        type: TypeOfVerificationCode.FORGOT_PASSWORD,
+        code: body.code,
+      }),
+    ])
+
+    return {
+      message: 'Password updated successfully',
+    }
+  }
+
+  async validateVerificationCode({
+    code,
+    type,
+    email,
+  }: {
+    code: string
+    type: TypeOfVerificationCodeType
+    email: string
+  }) {
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email })
+    if (!user) {
+      throw InvalidEmailException
+    }
+
+    const verificationCode = await this.authRepository.findUniqueVerificationCode({
+      email,
+      type,
+      code,
+    })
+    if (!verificationCode) {
+      console.log('>>> check code: hihi', code)
+      throw InvalidOTPException
+    }
+
+    if (code !== verificationCode.code) {
+      console.log('>>> check code: ', code, verificationCode.code)
+      throw InvalidOTPException
+    }
+
+    if (verificationCode.expiresAt < new Date()) {
+      throw OTPExpiredException
+    }
+
+    return verificationCode
   }
 }

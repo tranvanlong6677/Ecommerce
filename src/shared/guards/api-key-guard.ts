@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common'
 import { TokenService } from '../services/token.service'
 import envConfig from '../config'
+import { UnauthorizedExceptionCustom } from 'src/routes/auth/error.model'
 
 @Injectable()
 export class APIKeyGuard implements CanActivate {
@@ -9,7 +10,7 @@ export class APIKeyGuard implements CanActivate {
     const request = context.switchToHttp().getRequest()
     const xAPIKey = request.headers['x-api-key']
     if (xAPIKey !== envConfig.SECRET_API_KEY) {
-      throw new UnauthorizedException()
+      throw UnauthorizedExceptionCustom
     }
     return true
   }

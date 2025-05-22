@@ -5,6 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import React from 'react' // Quan trọng!
 import PlaidVerifyIdentityEmail from '../email-templates/email'
+import { SendOTPFailedException } from 'src/routes/auth/error.model'
 
 @Injectable()
 export class EmailService {
@@ -25,12 +26,7 @@ export class EmailService {
     })
 
     if (error) {
-      throw new UnprocessableEntityException([
-        {
-          message: 'Gửi mã OTP thất bại',
-          path: 'code',
-        },
-      ])
+      throw SendOTPFailedException
     }
 
     console.log({ data })

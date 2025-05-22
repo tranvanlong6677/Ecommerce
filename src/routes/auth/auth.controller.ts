@@ -1,6 +1,8 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Res } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import {
+  ChangePasswordBodyDto,
+  ForgotPasswordBodyDto,
   GetAuthorizationUrlResDto,
   LoginBodyDto,
   LoginResDto,
@@ -83,5 +85,19 @@ export class AuthController {
           : 'Đã xảy ra lỗi khi đăng nhập bằng Google, vui lòng thử lại bằng cách khác'
       return res.redirect(`${envConfig.GOOGLE_CLIENT_REDIRECT_URL}?errorMessage=${message}`)
     }
+  }
+
+  @Post('/forgot-password')
+  @IsPublic()
+  @ZodSerializerDto(MessageResDto)
+  forgotPassword(@Body() body: ForgotPasswordBodyDto) {
+    return this.authService.forgotPassword(body)
+  }
+
+  @Post('change-password')
+  @IsPublic()
+  @ZodSerializerDto(MessageResDto)
+  changePassword(@Body() body: ChangePasswordBodyDto) {
+    // return this.authService.changePassword(body)
   }
 }

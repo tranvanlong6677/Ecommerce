@@ -99,7 +99,34 @@ export const GetAuthorizationUrlResSchema = z.object({
   url: z.string().url(),
 })
 
+export const ForgotPasswordBodySchema = z
+  .object({
+    email: z.string().email(),
+    code: z.string().length(6),
+    password: z.string().min(6).max(100),
+    confirmPassword: z.string().min(6).max(100),
+  })
+  .strict()
+
 export const LogoutBodySchema = RefreshTokenBodySchema
+
+export const ChangePasswordBodySchema = z
+  .object({
+    email: z.string().email(),
+    code: z.string().length(6),
+    password: z.string().min(6).max(100),
+    confirmPassword: z.string().min(6).max(100),
+  })
+  .strict()
+  .superRefine(({ confirmPassword, password }, ctx) => {
+    if (confirmPassword !== password) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Password and confirm password must match',
+        path: ['confirmPassword'],
+      })
+    }
+  })
 
 export type RegisterBodyType = z.infer<typeof RegisterBodySchema>
 
@@ -128,3 +155,7 @@ export type LogoutBodyType = z.infer<typeof LogoutBodySchema>
 export type GoogleAuthStateType = z.infer<typeof GoogleAuthStateSchema>
 
 export type GetAuthorizationUrlResType = z.infer<typeof GetAuthorizationUrlResSchema>
+
+export type ForgotPasswordBodyType = z.infer<typeof ForgotPasswordBodySchema>
+
+export type ChangePasswordBodyType = z.infer<typeof ChangePasswordBodySchema>

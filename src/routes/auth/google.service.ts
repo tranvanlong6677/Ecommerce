@@ -8,6 +8,7 @@ import { HashingService } from 'src/shared/services/hashing.service'
 import { RoleService } from './roles.service'
 import { v4 as uuidv4 } from 'uuid'
 import { AuthService } from './auth.service'
+import { GoogleInvalidEmailException, GoogleLoginFailedException } from './error.model'
 
 @Injectable()
 export class GoogleService {
@@ -73,7 +74,7 @@ export class GoogleService {
       const { data } = await oauth2.userinfo.get()
       console.log('>>> check data', data)
       if (!data.email) {
-        throw new Error('Không thể lấy thông tin email từ google')
+        throw GoogleInvalidEmailException
       }
 
       let user = await this.authRepository.findUniqueUserIncludeRole({
@@ -111,7 +112,7 @@ export class GoogleService {
       return authTokens
     } catch (error) {
       console.log('error', error)
-      throw new Error('Đăng nhập với google thất bại')
+      throw GoogleLoginFailedException
     }
   }
 }
