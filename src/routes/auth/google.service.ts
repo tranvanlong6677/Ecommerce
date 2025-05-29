@@ -8,7 +8,7 @@ import { HashingService } from 'src/shared/services/hashing.service'
 import { RoleService } from './roles.service'
 import { v4 as uuidv4 } from 'uuid'
 import { AuthService } from './auth.service'
-import { GoogleInvalidEmailException, GoogleLoginFailedException } from './error.model'
+import { GoogleInvalidEmailException, GoogleLoginFailedException } from './auth.error'
 
 @Injectable()
 export class GoogleService {

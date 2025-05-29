@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import React from 'react'
 import { Resend } from 'resend'
-import { SendOTPFailedException } from 'src/routes/auth/error.model'
+import { SendOTPFailedException } from 'src/routes/auth/auth.error'
 import envConfig from '../config'
 import PlaidVerifyIdentityEmail from '../email-templates/email'
 
