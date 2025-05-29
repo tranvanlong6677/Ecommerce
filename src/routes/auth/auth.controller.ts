@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Res } fro
 import { AuthService } from './auth.service'
 import {
   ChangePasswordBodyDto,
+  DisableTwoFactorBodyDto,
   ForgotPasswordBodyDto,
   GetAuthorizationUrlResDto,
   LoginBodyDto,
@@ -12,13 +13,15 @@ import {
   RegisterBodyDto,
   RegisterResDto,
   SendOTPBodyDto,
+  TwoFactorSetupResDto,
 } from './dto/auth.dto'
 import { ZodSerializerDto } from 'nestjs-zod'
-import { IsPublic, UserAgent } from 'src/shared/decorators/auth.decorators'
+import { IsPublic, User, UserAgent } from 'src/shared/decorators/auth.decorators'
 import { MessageResDto } from 'src/shared/dtos/response.dto'
 import { GoogleService } from './google.service'
 import { Response } from 'express'
 import envConfig from 'src/shared/config'
+import { EmptyBodyDto } from 'src/shared/dtos/request.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -94,10 +97,20 @@ export class AuthController {
     return this.authService.forgotPassword(body)
   }
 
-  @Post('change-password')
-  @IsPublic()
+  // Dùng Post mặc dù body rỗng, vì post mang ý nghĩa là tạo ra cái gì đó, và post cũng bảo mật hơn get
+  // vì get sẽ hiển thị khi gọi link trên trình duyệt
+  @Post('/2fa/setup')
+  @ZodSerializerDto(TwoFactorSetupResDto)
+  setupTwoFactorAuth(@Body() _: EmptyBodyDto, @User('userId') id: number) {
+    return this.authService.setupTwoFactorAuth(id)
+  }
+
+  @Post('/2fa/disable')
   @ZodSerializerDto(MessageResDto)
-  changePassword(@Body() body: ChangePasswordBodyDto) {
-    // return this.authService.changePassword(body)
+  disableTwoFactorAuth(@Body() body: DisableTwoFactorBodyDto, @User('userId') id: number) {
+    return this.authService.disableTwoFactorAuth({
+      ...body,
+      userId: id,
+    })
   }
 }

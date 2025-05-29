@@ -32,7 +32,12 @@ export const VerificationCodeSchema = z.object({
   id: z.number(),
   code: z.string().length(6),
   email: z.string().email(),
-  type: z.enum([TypeOfVerificationCode.FORGOT_PASSWORD, TypeOfVerificationCode.REGISTER]),
+  type: z.enum([
+    TypeOfVerificationCode.FORGOT_PASSWORD,
+    TypeOfVerificationCode.REGISTER,
+    TypeOfVerificationCode.LOGIN,
+    TypeOfVerificationCode.DISABLE_2FA,
+  ]),
   expiresAt: z.date(),
   createdAt: z.date(),
 })
@@ -45,7 +50,20 @@ export const SendOTPBodySchema = VerificationCodeSchema.pick({
 export const LoginBodySchema = UserSchema.pick({
   email: true,
   password: true,
-}).strict()
+})
+  .extend({
+    totpCode: z.string().length(6).optional(),
+    code: z.string().length(6).optional(),
+  })
+  .superRefine(({ totpCode, code }, ctx) => {
+    if (totpCode !== undefined && code !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['totpCode', 'code'],
+        message: 'Bạn phải cung cấp mã xác thực 2FA hoặc mã xác thực email, không được cung cấp cả hai',
+      })
+    }
+  })
 
 export const LoginResSchema = z.object({
   accessToken: z.string(),
@@ -128,6 +146,33 @@ export const ChangePasswordBodySchema = z
     }
   })
 
+export const DisableTwoFactorBodySchema = z
+  .object({
+    code: z.string().length(6).optional(),
+    totpCode: z.string().length(6).optional(),
+  })
+  .superRefine(({ code, totpCode }, ctx) => {
+    if ((code !== undefined) === (totpCode !== undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['code', 'totpCode'],
+        message: 'Bạn phải cung cấp mã xác thực 2FA hoặc mã xác thực email, không được cung cấp cả hai',
+      })
+    }
+    if (!code && !totpCode) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['code', 'totpCode'],
+        message: 'Bạn phải cung cấp mã xác thực 2FA hoặc mã xác thực email',
+      })
+    }
+  })
+
+export const TwoFactorSetupResSchema = z.object({
+  secret: z.string(),
+  uri: z.string(),
+})
+
 export type RegisterBodyType = z.infer<typeof RegisterBodySchema>
 
 export type RegisterResType = z.infer<typeof RegisterResSchema>
@@ -159,3 +204,7 @@ export type GetAuthorizationUrlResType = z.infer<typeof GetAuthorizationUrlResSc
 export type ForgotPasswordBodyType = z.infer<typeof ForgotPasswordBodySchema>
 
 export type ChangePasswordBodyType = z.infer<typeof ChangePasswordBodySchema>
+
+export type DisableTwoFactorBodyType = z.infer<typeof DisableTwoFactorBodySchema>
+
+export type TwoFactorSetupResType = z.infer<typeof TwoFactorSetupResSchema>

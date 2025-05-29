@@ -66,3 +66,21 @@ export const GoogleInvalidEmailException = new UnprocessableEntityException([
 export const GoogleLoginFailedException = new UnprocessableEntityException([
   { message: 'Đăng nhập với google thất bại', path: 'google', key: 'GOOGLE_LOGIN_FAILED' },
 ])
+
+// 2FA
+export const TOTPAlreadySetupException = new UnprocessableEntityException([
+  { message: '2FA đã được cài đặt', path: 'totpCode', key: 'TOTP_ALREADY_SETUP' },
+])
+
+export const TOTPNotSetupException = new UnprocessableEntityException([
+  { message: '2FA chưa được cài đặt', path: 'totpCode', key: 'TOTP_NOT_SETUP' },
+])
+
+export const TOTPInvalidException = new UnprocessableEntityException([
+  { message: 'Mã OTP không hợp lệ', path: 'totpCode', key: 'TOTP_INVALID' },
+  { message: 'Mã OTP không hợp lệ', path: 'code', key: 'TOTP_INVALID' },
+])
+
+export const TOTPExpiredException = new UnprocessableEntityException([
+  { message: 'Mã OTP đã hết hạn', path: 'totpCode', key: 'TOTP_EXPIRED' },
+])

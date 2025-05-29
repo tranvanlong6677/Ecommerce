@@ -6,9 +6,18 @@ import { AuthRepository } from './auth.repo'
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
 import { EmailService } from 'src/shared/services/email.service'
 import { GoogleService } from './google.service'
+import { TwoFactorAuthService } from 'src/shared/services/2fa.service'
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, RoleService, AuthRepository, SharedUserRepository, EmailService, GoogleService],
+  providers: [
+    AuthService,
+    RoleService,
+    AuthRepository,
+    SharedUserRepository,
+    EmailService,
+    GoogleService,
+    TwoFactorAuthService,
+  ],
 })
 export class AuthModule {}

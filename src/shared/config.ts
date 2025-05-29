@@ -30,6 +30,7 @@ export const configSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string(),
   GOOGLE_REDIRECT_URL: z.string(),
   GOOGLE_CLIENT_REDIRECT_URL: z.string(),
+  APP_NAME: z.string(),
 })
 
 const configServer = configSchema.safeParse(process.env)

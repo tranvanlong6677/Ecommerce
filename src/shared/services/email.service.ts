@@ -1,11 +1,9 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
+import React from 'react'
 import { Resend } from 'resend'
-import envConfig from '../config'
-import fs from 'fs'
-import path from 'path'
-import React from 'react' // Quan trọng!
-import PlaidVerifyIdentityEmail from '../email-templates/email'
 import { SendOTPFailedException } from 'src/routes/auth/error.model'
+import envConfig from '../config'
+import PlaidVerifyIdentityEmail from '../email-templates/email'
 
 @Injectable()
 export class EmailService {
@@ -19,7 +17,6 @@ export class EmailService {
       from: 'NestJS Ecommerce <no-reply@golart.io.vn>',
       to: [payload.email],
       subject: 'Golart Ecommerce',
-      // html: otpTemplate.replaceAll('{{code}}', payload.code + ''),
       react: React.createElement(PlaidVerifyIdentityEmail, {
         validationCode: payload.code,
       }),
@@ -29,7 +26,6 @@ export class EmailService {
       throw SendOTPFailedException
     }
 
-    console.log({ data })
     return { data, error }
   }
 }

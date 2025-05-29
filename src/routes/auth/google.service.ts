@@ -54,7 +54,6 @@ export class GoogleService {
       try {
         if (state) {
           const clientInfo = JSON.parse(Buffer.from(state, 'base64').toString()) as GoogleAuthStateType
-          console.log('>> check client info', clientInfo)
           userAgent = clientInfo.userAgent
           ip = clientInfo.ip
         }
@@ -72,7 +71,6 @@ export class GoogleService {
         version: 'v2',
       })
       const { data } = await oauth2.userinfo.get()
-      console.log('>>> check data', data)
       if (!data.email) {
         throw GoogleInvalidEmailException
       }
