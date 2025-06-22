@@ -1,7 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Res } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import {
-  ChangePasswordBodyDto,
   DisableTwoFactorBodyDto,
   ForgotPasswordBodyDto,
   GetAuthorizationUrlResDto,

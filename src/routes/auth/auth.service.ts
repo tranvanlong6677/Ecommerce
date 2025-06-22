@@ -21,6 +21,7 @@ import { TypeOfVerificationCode, TypeOfVerificationCodeType } from 'src/shared/c
 import { EmailService } from 'src/shared/services/email.service'
 import {
   EmailAlreadyExistsException,
+  EmailOrPasswordNotTrueException,
   InvalidEmailException,
   InvalidOTPException,
   InvalidRefreshTokenException,
@@ -119,7 +120,7 @@ export class AuthService {
     const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email })
 
     if (!user) {
-      throw EmailAlreadyExistsException
+      throw EmailOrPasswordNotTrueException
     }
     const isPasswordMatch = await this.hashingService.compare(body.password, user.password)
     if (!isPasswordMatch) {
@@ -325,7 +326,7 @@ export class AuthService {
     email: string
   }) {
     const user = await this.authRepository.findUniqueUserIncludeRole({ email })
-    if (!user) {
+    if (!user && type !== TypeOfVerificationCode.REGISTER) {
       throw InvalidEmailException
     }
 

@@ -30,9 +30,9 @@ export const CreateLanguageSchema = z.object({
   name: z.string(),
 })
 
-export const UpdateLanguageSchema = z.object({
-  name: z.string(),
-})
+export const UpdateLanguageSchema = LanguageSchema.pick({
+  name: true,
+}).strict()
 
 export type CreateLanguageSchemaType = z.infer<typeof CreateLanguageSchema>
 export type UpdateLanguageSchemaType = z.infer<typeof UpdateLanguageSchema>

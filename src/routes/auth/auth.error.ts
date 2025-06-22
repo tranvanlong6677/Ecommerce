@@ -18,6 +18,9 @@ export const EmailAlreadyExistsException = new UnprocessableEntityException([
 export const InvalidEmailException = new UnprocessableEntityException([
   { message: 'Email không hợp lệ', path: 'email', key: 'INVALID_EMAIL' },
 ])
+export const EmailOrPasswordNotTrueException = new UnprocessableEntityException([
+  { message: 'Email hoặc mật khẩu không đúng', path: 'email', key: 'EMAIL_OR_PASSWORD_NOT_TRUE' },
+])
 
 // Phone Number
 export const PhoneNumberAlreadyExistsException = new UnprocessableEntityException([
