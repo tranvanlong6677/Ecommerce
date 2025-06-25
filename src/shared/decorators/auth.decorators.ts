@@ -16,7 +16,7 @@ export const User = createParamDecorator((field: keyof AccessTokenPayload | unde
   return field ? user?.[field] : user
 })
 
-export const UserAgent = createParamDecorator((data: unknown, ctx: ExecutionContext): string => {
+export const UserAgent = createParamDecorator((_data: unknown, ctx: ExecutionContext): string => {
   const request = ctx.switchToHttp().getRequest()
   return request.headers['user-agent']
 })

@@ -1,34 +1,51 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { RolesService } from './roles.service';
-import { CreateRoleDto } from './dto/create-role.dto';
-import { UpdateRoleDto } from './dto/update-role.dto';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put } from '@nestjs/common'
+import { ZodSerializerDto } from 'nestjs-zod'
+import { RolesService } from './roles.service'
+
+import {
+  CreateRoleBodyDto,
+  CreateRoleResDto,
+  GetRoleQueryDto,
+  GetRoleResDto,
+  GetRolesQueryDto,
+  GetRolesResDto,
+  UpdateRoleBodyDto,
+  UpdateRoleResDto,
+} from './roles.dto'
+import { User } from 'src/shared/decorators/auth.decorators'
+import { MessageResDto } from 'src/shared/dtos/response.dto'
 
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
-  @Post()
-  create(@Body() createRoleDto: CreateRoleDto) {
-    return this.rolesService.create(createRoleDto);
-  }
-
   @Get()
-  findAll() {
-    return this.rolesService.findAll();
+  @ZodSerializerDto(GetRolesResDto)
+  async findAll(@Query() query: GetRolesQueryDto) {
+    return this.rolesService.findAll(query)
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.rolesService.findOne(+id);
+  @ZodSerializerDto(GetRoleResDto)
+  findOne(@Param() params: GetRoleQueryDto) {
+    return this.rolesService.findOne(params)
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
-    return this.rolesService.update(+id, updateRoleDto);
+  @Post()
+  @ZodSerializerDto(CreateRoleResDto)
+  create(@Body() body: CreateRoleBodyDto, @User('userId') userId: number) {
+    return this.rolesService.create({ data: body, userId })
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.rolesService.remove(+id);
+  @Put(':roleId')
+  @ZodSerializerDto(UpdateRoleResDto)
+  update(@Param('roleId') roleId: string, @Body() body: UpdateRoleBodyDto, @User('userId') userId: number) {
+    return this.rolesService.update({ roleId: +roleId, data: body, userId })
+  }
+
+  @Delete(':roleId')
+  @ZodSerializerDto(MessageResDto)
+  remove(@Param('roleId') roleId: string, @User('userId') userId: number) {
+    return this.rolesService.remove({ roleId: +roleId, userId })
   }
 }
