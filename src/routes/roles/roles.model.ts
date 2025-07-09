@@ -1,15 +1,6 @@
 import { PermissionSchema } from 'src/shared/models/shared-permission.model'
+import { RoleSchema } from 'src/shared/models/shared-role.model'
 import { z } from 'zod'
-
-export const RoleSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  description: z.string().default(''),
-  isActive: z.boolean(),
-  createdAt: z.date().default(new Date()),
-  updatedAt: z.date().default(new Date()),
-  createdById: z.number().nullable().optional(),
-})
 
 export const GetRolesQuerySchema = z
   .object({
@@ -36,7 +27,9 @@ export const GetRoleQuerySchema = z
 
 export const GetRoleResSchema = z
   .object({
-    data: RoleSchema,
+    data: RoleSchema.extend({
+      permissions: z.array(PermissionSchema),
+    }),
   })
   .strict()
 
