@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common'
 import { RoleNotFoundError } from './roles.error'
 import { CreateRoleBodyType, GetRoleQueryType, GetRolesQueryType, UpdateRoleBodyType } from './roles.model'
 import { RolesRepository } from './roles.repo'
@@ -23,8 +23,15 @@ export class RolesService {
   }
 
   async update({ roleId, data, userId }: { roleId: number; data: UpdateRoleBodyType; userId: number }) {
-    await this.rolesRepository.findUnique({ id: roleId })
-    return await this.rolesRepository.updateRole({ id: roleId, data, userId })
+    try {
+      await this.rolesRepository.findUnique({ id: roleId })
+      return await this.rolesRepository.updateRole({ id: roleId, data, userId })
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new BadRequestException(error.message)
+      }
+      throw error
+    }
   }
 
   async remove({ roleId, userId, isHard = false }: { roleId: number; userId: number; isHard?: boolean }) {

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from 'src/shared/services/prisma.service'
 import { CreateRoleBodyType, GetRolesQueryType, UpdateRoleBodyType } from './roles.model'
 import { RoleNotFoundError } from './roles.error'
@@ -43,7 +43,11 @@ export class RolesRepository {
         deletedAt: null,
       },
       include: {
-        permissions: true,
+        permissions: {
+          where: {
+            deletedAt: null,
+          },
+        },
       },
     })
     if (!data) throw RoleNotFoundError
@@ -58,7 +62,7 @@ export class RolesRepository {
       },
     })
 
-    if (!data) {
+    if (data) {
       throw new BadRequestException('Role already exists')
     }
 
@@ -72,6 +76,21 @@ export class RolesRepository {
   }
 
   async updateRole({ id, data, userId }: { id: number; data: UpdateRoleBodyType; userId: number }) {
+    const permissions = await this.prisma.permission.findMany({
+      where: {
+        id: { in: data.permissionIds },
+      },
+    })
+
+    const deletedPermissionsIds = permissions
+      .filter((permission) => permission.deletedAt !== null)
+      .map((permission) => permission.id)
+
+    if (deletedPermissionsIds.length > 0) {
+      const stringDeletedPermissionsIds = deletedPermissionsIds.join(', ')
+      throw new BadGatewayException(`${stringDeletedPermissionsIds} are deleted`)
+    }
+
     const result = await this.prisma.role.update({
       where: { id },
       data: {
@@ -83,7 +102,11 @@ export class RolesRepository {
         updatedAt: new Date(),
       },
       include: {
-        permissions: true,
+        permissions: {
+          where: {
+            deletedAt: null,
+          },
+        },
       },
     })
     return { data: result }

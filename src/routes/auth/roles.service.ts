@@ -12,8 +12,6 @@ export class RoleService {
       return this.clientRoleId
     }
 
-    console.log('RoleName.Client', RoleName.Client)
-
     const role: RoleType | undefined = await this.prismaService
       .$queryRaw`SELECT * FROM "Role" WHERE name = ${RoleName.Client} AND "deletedAt" IS NULL LIMIT 1`.then(
       (res) => res?.[0],
@@ -27,5 +25,3 @@ export class RoleService {
     return role.id
   }
 }
-
-new RoleService(new PrismaService()).getClientRoleId()
