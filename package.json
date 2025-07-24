@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "set-permission-for-admin": "ts-node initialScript/add-all-permission-for-admin.ts",
     "init-seed-data": "ts-node initialScript",
     "create-permissions": "ts-node initialScript/create-permissions.ts",
     "build": "nest build",

@@ -1,7 +1,10 @@
-import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common'
-import { RoleNotFoundError } from './roles.error'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { CreateRoleBodyType, GetRoleQueryType, GetRolesQueryType, UpdateRoleBodyType } from './roles.model'
 import { RolesRepository } from './roles.repo'
+import { isNotFoundPrismaError } from 'src/shared/helpers'
+import { NotFoundRecordException } from 'src/shared/error'
+import { RoleName } from 'src/shared/constants/role.constant'
+import { ProhibitedActionError } from './roles.error'
 
 @Injectable()
 export class RolesService {
@@ -24,7 +27,15 @@ export class RolesService {
 
   async update({ roleId, data, userId }: { roleId: number; data: UpdateRoleBodyType; userId: number }) {
     try {
-      await this.rolesRepository.findUnique({ id: roleId })
+      await this.verifyRole(roleId)
+      const role = await this.rolesRepository.findUnique({ id: roleId })
+      if (!role) {
+        throw NotFoundRecordException
+      }
+      const baseRoles: string[] = [RoleName.Admin]
+      if (baseRoles.includes(role.name)) {
+        throw ProhibitedActionError
+      }
       return await this.rolesRepository.updateRole({ id: roleId, data, userId })
     } catch (error) {
       if (error instanceof Error) {
@@ -35,7 +46,34 @@ export class RolesService {
   }
 
   async remove({ roleId, userId, isHard = false }: { roleId: number; userId: number; isHard?: boolean }) {
-    await this.rolesRepository.findUnique({ id: roleId })
-    return await this.rolesRepository.deleteRole({ id: roleId, userId, isHard })
+    try {
+      await this.verifyRole(roleId)
+      const role = await this.rolesRepository.findUnique({ id: roleId })
+      if (!role) {
+        throw NotFoundRecordException
+      }
+      const baseRoles: string[] = [RoleName.Client, RoleName.Admin, RoleName.Seller]
+      if (baseRoles.includes(role.name)) {
+        throw ProhibitedActionError
+      }
+      return await this.rolesRepository.deleteRole({ id: roleId, userId, isHard })
+    } catch (error) {
+      if (isNotFoundPrismaError(error)) {
+        throw NotFoundRecordException
+      }
+      throw error
+    }
+  }
+
+  private async verifyRole(roleId: number) {
+    const role = await this.rolesRepository.findUnique({ id: roleId })
+    if (!role) {
+      throw NotFoundRecordException
+    }
+    const baseRoles: string[] = [RoleName.Admin, RoleName.Client, RoleName.Seller]
+
+    if (baseRoles.includes(role.name)) {
+      throw ProhibitedActionError
+    }
   }
 }

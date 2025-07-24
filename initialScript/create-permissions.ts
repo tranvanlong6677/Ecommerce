@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from 'src/app.module'
-import { HTTPMethod } from 'src/shared/constants/role.constant'
+import { HTTPMethod, RoleName } from 'src/shared/constants/role.constant'
 import { PrismaService } from 'src/shared/services/prisma.service'
 
 const prisma = new PrismaService()
@@ -17,16 +17,18 @@ async function bootstrap() {
     },
   })
 
-  const availableRoutes: { path: string; method: keyof typeof HTTPMethod; name: string }[] = router.stack
-    .map((layer) => {
-      if (layer.route) {
-        const path = layer.route?.path
-        const method = String(layer.route?.stack[0]?.method).toUpperCase() as keyof typeof HTTPMethod
-        const name = `${method} ${path}`
-        return { path, method, name }
-      }
-    })
-    .filter((item) => item !== undefined)
+  const availableRoutes: { path: string; method: keyof typeof HTTPMethod; name: string; module: string }[] =
+    router.stack
+      .map((layer) => {
+        if (layer.route) {
+          const path = layer.route?.path
+          const method = String(layer.route?.stack[0]?.method).toUpperCase() as keyof typeof HTTPMethod
+          const name = `${method} ${path}`
+          const module = path.split('/')[1]?.toUpperCase()
+          return { path, method, name, module }
+        }
+      })
+      .filter((item) => item !== undefined)
 
   // Tạo object permissionInDbMap để lưu trữ các permission đã có trong database với key là method-path
   const permissionInDbMap: Record<string, (typeof permissionsInDb)[number]> = permissionsInDb.reduce((acc, item) => {
@@ -80,6 +82,33 @@ async function bootstrap() {
   //   } catch (error) {
   //     console.log(error)
   //   }
+
+  const updatedPermissions = await prisma.permission.findMany({
+    where: {
+      deletedAt: null,
+    },
+  })
+
+  const adminRole = await prisma.role.findFirstOrThrow({
+    where: {
+      deletedAt: null,
+      name: RoleName.Admin,
+    },
+  })
+
+  await prisma.role.update({
+    where: {
+      deletedAt: null,
+      id: adminRole.id,
+    },
+    data: {
+      permissions: {
+        set: updatedPermissions.map((item) => ({
+          id: item.id,
+        })),
+      },
+    },
+  })
 
   process.exit(0)
 }

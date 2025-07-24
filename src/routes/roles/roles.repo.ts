@@ -2,7 +2,6 @@ import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/co
 import { PrismaService } from 'src/shared/services/prisma.service'
 import { CreateRoleBodyType, GetRolesQueryType, UpdateRoleBodyType } from './roles.model'
 import { RoleNotFoundError } from './roles.error'
-import { message } from 'antd'
 
 @Injectable()
 export class RolesRepository {
@@ -51,7 +50,7 @@ export class RolesRepository {
       },
     })
     if (!data) throw RoleNotFoundError
-    return { data }
+    return data
   }
 
   async findRoleByName({ name }: { name: string }) {

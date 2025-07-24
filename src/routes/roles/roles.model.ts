@@ -27,7 +27,7 @@ export const GetRoleQuerySchema = z
 
 export const GetRoleResSchema = z
   .object({
-    data: RoleSchema.extend({
+    data: RoleSchema.extend({ 
       permissions: z.array(PermissionSchema),
     }),
   })
