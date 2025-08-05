@@ -12,3 +12,5 @@ export const RoleSchema = z.object({
   updatedById: z.number().nullable().optional(),
   deletedById: z.number().nullable().optional(),
 })
+
+export type RoleType = z.infer<typeof RoleSchema>

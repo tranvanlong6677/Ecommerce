@@ -1,7 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common'
 import { TokenService } from '../services/token.service'
 import { REQUEST_USER_KEY } from '../constants/auth.constants'
-import { UnauthorizedExceptionCustom } from 'src/routes/auth/auth.error'
 import { AccessTokenPayload } from '../types/jwt.types'
 import { HTTPMethod } from '@prisma/client'
 import { PrismaService } from '../services/prisma.service'

@@ -4,10 +4,10 @@ import {
   CreatePermissionType,
   GetPermissionsQueryType,
   GetPermissionsResType,
-  PermissionType,
   UpdatePermissionType,
 } from './permissions.model'
 import { HTTPMethod } from '@prisma/client'
+import { PermissionType } from 'src/shared/models/shared-permission.model'
 
 @Injectable()
 export class PermissionsRepository {

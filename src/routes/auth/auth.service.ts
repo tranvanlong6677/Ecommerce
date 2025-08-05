@@ -87,7 +87,7 @@ export class AuthService {
 
   async sendOtp(body: SendOTPBodyType) {
     // 1:Kiểm tra email đã tồn tại hay chưa
-    const user = await this.sharedUserRepository.findUnique({ email: body.email })
+    const user = await this.sharedUserRepository.findUnique({ email: body.email, deletedAt: null })
     if (body.type === TypeOfVerificationCode.REGISTER && user) {
       throw EmailAlreadyExistsException
     }
@@ -100,7 +100,7 @@ export class AuthService {
       email: body.email,
       type: body.type,
       code: code + '',
-      expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPIRES_IN)),
+      expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPIRES_IN) as number),
     })
     // 3: Gửi mã OTP
     await this.emailService.sendEmailOTP({ code, email: body.email })
@@ -117,7 +117,7 @@ export class AuthService {
     },
   ) {
     // 1: Kiểm tra email có tồn tại trong DB hay không,Mật khẩu có đúng hay không
-    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email })
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email, deletedAt: null })
 
     if (!user) {
       throw EmailOrPasswordNotTrueException
@@ -206,6 +206,7 @@ export class AuthService {
 
       const user = await this.authRepository.findUniqueUserIncludeRole({
         id: decodedRefreshToken.userId,
+        deletedAt: null,
       })
 
       if (!user) {
@@ -281,7 +282,7 @@ export class AuthService {
 
   async forgotPassword(body: ForgotPasswordBodyType) {
     // 1: Kiểm tra email có tồn tại trong DB hay không
-    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email })
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email, deletedAt: null })
     if (!user) {
       throw InvalidEmailException
     }
@@ -296,7 +297,7 @@ export class AuthService {
     const hashedPassword = await this.hashingService.hashPassword(body.password)
     await Promise.all([
       await this.authRepository.updateUser(
-        { id: user.id },
+        { id: user?.id },
         {
           password: hashedPassword,
         },
@@ -325,7 +326,7 @@ export class AuthService {
     type: TypeOfVerificationCodeType
     email: string
   }) {
-    const user = await this.authRepository.findUniqueUserIncludeRole({ email })
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email, deletedAt: null })
     if (!user && type !== TypeOfVerificationCode.REGISTER) {
       throw InvalidEmailException
     }
@@ -354,7 +355,7 @@ export class AuthService {
 
   async setupTwoFactorAuth(userId: number) {
     // 1: Kiểm tra xem user có tồn tại trong DB hay không, xem user đã có 2FA hay chưa
-    const user = await this.sharedUserRepository.findUnique({ id: userId })
+    const user = await this.sharedUserRepository.findUnique({ id: userId, deletedAt: null })
     if (!user) {
       throw UserNotFoundException
     }
@@ -375,7 +376,7 @@ export class AuthService {
   async disableTwoFactorAuth(data: DisableTwoFactorBodyType & { userId: number }) {
     const { userId, totpCode, code } = data
     // 1: Kiểm tra xem user có bật 2FA hay không
-    const user = await this.sharedUserRepository.findUnique({ id: userId })
+    const user = await this.sharedUserRepository.findUnique({ id: userId, deletedAt: null })
     if (!user) {
       throw UserNotFoundException
     }

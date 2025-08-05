@@ -1,10 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { CreateRoleBodyType, GetRoleQueryType, GetRolesQueryType, UpdateRoleBodyType } from './roles.model'
 import { RolesRepository } from './roles.repo'
-import { isNotFoundPrismaError } from 'src/shared/helpers'
+import { isNotFoundPrismaError, isUniqueContraintPrismaError } from 'src/shared/helpers'
 import { NotFoundRecordException } from 'src/shared/error'
 import { RoleName } from 'src/shared/constants/role.constant'
-import { ProhibitedActionError } from './roles.error'
+import { ProhibitedActionError, RoleAlreadyExistsError } from './roles.error'
 
 @Injectable()
 export class RolesService {
@@ -38,9 +38,14 @@ export class RolesService {
       }
       return await this.rolesRepository.updateRole({ id: roleId, data, userId })
     } catch (error) {
-      if (error instanceof Error) {
-        throw new BadRequestException(error.message)
+      if (isNotFoundPrismaError(error)) {
+        throw NotFoundRecordException
       }
+
+      if (isUniqueContraintPrismaError(error)) {
+        throw RoleAlreadyExistsError
+      }
+
       throw error
     }
   }

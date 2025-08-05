@@ -35,7 +35,6 @@ export const GetPermissionParamsSchema = z
   })
   .strict()
 
-export type PermissionType = z.infer<typeof PermissionSchema>
 export type CreatePermissionType = z.infer<typeof CreatePermissionSchema>
 export type GetPermissionsResType = z.infer<typeof GetPermissionsResSchema>
 export type GetPermissionResType = z.infer<typeof GetPermissionResSchema>

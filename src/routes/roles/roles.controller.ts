@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put } from '@nestjs/common'
+import { Controller, Get, Post, Body, Param, Delete, Query, Put } from '@nestjs/common'
 import { ZodSerializerDto } from 'nestjs-zod'
 import { RolesService } from './roles.service'
 

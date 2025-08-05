@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { PermissionsRepository } from './permissions.repo'
 import {
   CreatePermissionType,
