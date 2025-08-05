@@ -7,6 +7,8 @@ import { AccessTokenGuard } from './guards/access-token-guard'
 import { APIKeyGuard } from './guards/api-key-guard'
 import { APP_GUARD } from '@nestjs/core'
 import { AuthGuard } from './guards/auth-guard'
+import { SharedUserRepository } from './repositories/shared-user.repo'
+import { SharedRoleRepository } from './repositories/shared-role.repo'
 
 const sharedServices = [PrismaService, HashingService, TokenService]
 
@@ -14,6 +16,8 @@ const sharedServices = [PrismaService, HashingService, TokenService]
 @Module({
   providers: [
     ...sharedServices,
+    SharedUserRepository,
+    SharedRoleRepository,
     AccessTokenGuard,
     APIKeyGuard,
     {
@@ -21,7 +25,7 @@ const sharedServices = [PrismaService, HashingService, TokenService]
       useClass: AuthGuard,
     },
   ],
-  exports: [...sharedServices],
+  exports: [...sharedServices, SharedUserRepository, SharedRoleRepository],
   imports: [JwtModule],
 })
 export class SharedModule {}

@@ -5,10 +5,10 @@ import envConfig from 'src/shared/config'
 import { GoogleAuthStateType } from './auth.model'
 import { AuthRepository } from './auth.repo'
 import { HashingService } from 'src/shared/services/hashing.service'
-import { RoleService } from './roles.service'
 import { v4 as uuidv4 } from 'uuid'
 import { AuthService } from './auth.service'
 import { GoogleInvalidEmailException, GoogleLoginFailedException } from './auth.error'
+import { SharedRoleRepository } from 'src/shared/repositories/shared-role.repo'
 
 @Injectable()
 export class GoogleService {
@@ -17,7 +17,7 @@ export class GoogleService {
     private readonly authRepository: AuthRepository,
     private readonly hashingService: HashingService,
     private readonly authService: AuthService,
-    private readonly roleService: RoleService,
+    private readonly sharedRoleRepository: SharedRoleRepository,
   ) {
     this.oauth2Client = new google.auth.OAuth2(
       envConfig.GOOGLE_CLIENT_ID,
@@ -81,7 +81,7 @@ export class GoogleService {
 
       // Nếu không có user tức là người dùng mới, tiến hành đăng ký
       if (!user) {
-        const clientRoleId = await this.roleService.getClientRoleId()
+        const clientRoleId = await this.sharedRoleRepository.getClientRoleId()
         const randomPassword = uuidv4()
         const hashedPassword = await this.hashingService.hashPassword(randomPassword)
         user = await this.authRepository.createUserIncludeRole({
