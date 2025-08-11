@@ -13,14 +13,14 @@ type UserIncludeRolePermissionsType = UserType & { role: RoleType & { permission
 export class SharedUserRepository {
   constructor(private readonly prismaService: PrismaService) {}
   async findUnique(uniqueObject: UniqueUserType): Promise<UserType | null> {
-    return await this.prismaService.user.findUniqueOrThrow({
+    return await this.prismaService.user.findFirst({
       where: uniqueObject,
       omit: {},
     })
   }
 
   async findUniqueWithRolePermissions(uniqueObject: UniqueUserType): Promise<UserIncludeRolePermissionsType | null> {
-    return await this.prismaService.user.findUnique({
+    return await this.prismaService.user.findFirst({
       where: uniqueObject,
       include: {
         role: { include: { permissions: { where: { deletedAt: null } } } },

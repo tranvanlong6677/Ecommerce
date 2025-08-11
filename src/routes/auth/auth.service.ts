@@ -117,7 +117,7 @@ export class AuthService {
     },
   ) {
     // 1: Kiểm tra email có tồn tại trong DB hay không,Mật khẩu có đúng hay không
-    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email, deletedAt: null })
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email })
 
     if (!user) {
       throw EmailOrPasswordNotTrueException
@@ -206,7 +206,6 @@ export class AuthService {
 
       const user = await this.authRepository.findUniqueUserIncludeRole({
         id: decodedRefreshToken.userId,
-        deletedAt: null,
       })
 
       if (!user) {
@@ -282,7 +281,7 @@ export class AuthService {
 
   async forgotPassword(body: ForgotPasswordBodyType) {
     // 1: Kiểm tra email có tồn tại trong DB hay không
-    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email, deletedAt: null })
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email: body.email })
     if (!user) {
       throw InvalidEmailException
     }
@@ -326,7 +325,7 @@ export class AuthService {
     type: TypeOfVerificationCodeType
     email: string
   }) {
-    const user = await this.authRepository.findUniqueUserIncludeRole({ email, deletedAt: null })
+    const user = await this.authRepository.findUniqueUserIncludeRole({ email })
     if (!user && type !== TypeOfVerificationCode.REGISTER) {
       throw InvalidEmailException
     }

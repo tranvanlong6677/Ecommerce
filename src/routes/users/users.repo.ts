@@ -1,11 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { PrismaService } from 'src/shared/services/prisma.service'
-import {
-  CreateUsersSchemaType,
-  UpdateUsersSchemaType,
-  GetUserResSchema,
-} from './users.model'
+import { CreateUsersSchemaType, UpdateUsersSchemaType, GetUserResSchema } from './users.model'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { SharedRoleRepository } from 'src/shared/repositories/shared-role.repo'
 import { RoleName } from 'src/shared/constants/role.constant'
@@ -20,7 +16,7 @@ export class UsersRepository {
   ) {}
 
   async findUnique(where: { id: number } | { email: string }) {
-    return this.prisma.user.findUniqueOrThrow({
+    return this.prisma.user.findFirst({
       where: { ...where, deletedAt: null },
       include: {
         role: {
@@ -34,16 +30,13 @@ export class UsersRepository {
   }
 
   async findUniqueIncludeRole(where: { id: number } | { email: string }) {
-    return this.prisma.user.findUnique({
+    return this.prisma.user.findFirst({
       where: { ...where, deletedAt: null },
       include: { role: true },
     })
   }
 
-  async findAll(
-    where: { page: number; limit: number },
-    include?: Prisma.UserInclude,
-  ) {
+  async findAll(where: { page: number; limit: number }, include?: Prisma.UserInclude) {
     const { page, limit, ...rest } = where
 
     const [totalItems, data] = await Promise.all([
@@ -73,13 +66,7 @@ export class UsersRepository {
     }
   }
 
-  async create({
-    data,
-    createdById,
-  }: {
-    data: CreateUsersSchemaType
-    createdById: number
-  }) {
+  async create({ data, createdById }: { data: CreateUsersSchemaType; createdById: number }) {
     const now = new Date()
     const clientRoleId = await this.sharedRoleRepository.getClientRoleId()
     return await this.prisma.user.create({
@@ -95,15 +82,7 @@ export class UsersRepository {
     })
   }
 
-  async update({
-    id,
-    data,
-    updatedById,
-  }: {
-    id: number
-    data: UpdateUsersSchemaType
-    updatedById: number
-  }) {
+  async update({ id, data, updatedById }: { id: number; data: UpdateUsersSchemaType; updatedById: number }) {
     const now = new Date()
     const clientRoleId = await this.sharedRoleRepository.getClientRoleId()
     return await this.prisma.user.update({
@@ -157,13 +136,7 @@ export class UsersRepository {
     }
   }
 
-  verifyYourself({
-    userAgentId,
-    userTargetId,
-  }: {
-    userAgentId: number
-    userTargetId: number
-  }) {
+  verifyYourself({ userAgentId, userTargetId }: { userAgentId: number; userTargetId: number }) {
     if (userAgentId === userTargetId) {
       throw CannotUpdateOrDeleteYourselfException
     }

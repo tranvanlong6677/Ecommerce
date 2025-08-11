@@ -3,7 +3,7 @@ import { PrismaService } from 'src/shared/services/prisma.service'
 import { HashingService } from 'src/shared/services/hashing.service'
 import { NotFoundRecordException } from 'src/shared/error'
 import { isNotFoundPrismaError } from 'src/shared/helpers'
-import { ChangePasswordBodySchemaType, GetProfileResType } from 'src/shared/models/shared-user.model'
+import { ChangePasswordBodySchemaType } from 'src/shared/models/shared-user.model'
 import { UpdateProfileBodySchemaType } from './profile.model'
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo'
 
@@ -14,26 +14,11 @@ export class ProfileRepository {
     private readonly hashingService: HashingService,
     private readonly sharedUserRepo: SharedUserRepository,
   ) {}
-  async findUnique(uniqueValue: { id: number } | { email: string }): Promise<GetProfileResType> {
-    return await this.prismaService.user.findUniqueOrThrow({
-      where: {
-        ...uniqueValue,
-        deletedAt: null,
-      },
-      include: {
-        role: {
-          include: {
-            permissions: true,
-          },
-        },
-      },
-    })
-  }
 
-  async updateProfile(uniqueValue: { id: number } | { email: string }, data: UpdateProfileBodySchemaType) {
+  async updateProfile(uniqueValue: { id: number }, data: UpdateProfileBodySchemaType) {
     return await this.prismaService.user.update({
       where: {
-        ...uniqueValue,
+        id: uniqueValue.id,
         deletedAt: null,
       },
       select: {
