@@ -1,12 +1,10 @@
-import { BadRequestException, Module } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 import { MediaService } from './media.service'
-import { ALLOWED_MIME, MediaController } from './media.controller'
+import { MediaController } from './media.controller'
 import { MulterModule } from '@nestjs/platform-express/multer/multer.module'
-import path from 'path'
 import { diskStorage } from 'multer'
 import { generateRandomFileName } from 'src/shared/helpers'
-
-const UPLOAD_PATH = path.resolve('uploads')
+import { UPLOAD_PATH } from 'src/shared/constants/other.constants'
 
 @Module({
   imports: [
@@ -17,7 +15,6 @@ const UPLOAD_PATH = path.resolve('uploads')
         },
         filename: (_, file, callback) => {
           const newFileName = generateRandomFileName(file.originalname)
-          console.log('>>> check newFileName ', newFileName)
           callback(null, newFileName)
         },
       }),
