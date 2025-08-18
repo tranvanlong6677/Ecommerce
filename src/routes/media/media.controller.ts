@@ -2,10 +2,7 @@ import {
   Controller,
   Get,
   Post,
-  Body,
-  Patch,
   Param,
-  Delete,
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
@@ -16,15 +13,13 @@ import {
   Res,
   NotFoundException,
 } from '@nestjs/common'
-import { MediaService } from './media.service'
-import { CreateMediaDto } from './dto/create-media.dto'
-import { UpdateMediaDto } from './dto/update-media.dto'
+
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express'
-import envConfig from 'src/shared/config'
 import { IsPublic } from 'src/shared/decorators/auth.decorators'
 import path from 'path'
 import { UPLOAD_PATH } from 'src/shared/constants/other.constants'
 import { Response } from 'express'
+import { MediaService } from './media.service'
 // import { FileSizeValidationPipe } from 'src/shared/pipes/validation-upload-file.pipe'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -33,11 +28,6 @@ export const ALLOWED_MIME = /^image\/(png|jpe?g|x-png|pjpeg)$/i
 @Controller('media')
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
-
-  @Post()
-  create(@Body() createMediaDto: CreateMediaDto) {
-    return this.mediaService.create(createMediaDto)
-  }
 
   // Cách 1: Tự viết và sử dụng Pipe để validate dữ liệu file
   // @Post('images/upload')
@@ -63,7 +53,7 @@ export class MediaController {
     )
     file: Express.Multer.File,
   ) {
-    return file
+    return this.mediaService.uploadFile(file)
   }
 
   @Post('images/upload-multiple')
@@ -72,7 +62,7 @@ export class MediaController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  uploadFiles(
+  async uploadFiles(
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
@@ -85,14 +75,7 @@ export class MediaController {
     )
     files: Array<Express.Multer.File>,
   ) {
-    const urlFiles = files.map((file) => ({
-      url: `${envConfig.APP_URL}/media/${file.filename}`,
-      filename: file.filename,
-      fileSize: file.size,
-      mimetype: file.mimetype,
-      originalname: file.originalname,
-    }))
-    return urlFiles
+    return this.mediaService.uploadFiles(files)
   }
 
   @Get('/:filename')
@@ -104,25 +87,5 @@ export class MediaController {
         res.status(notfound.getStatus()).json(notfound.getResponse())
       }
     })
-  }
-
-  @Get()
-  findAll() {
-    return this.mediaService.findAll()
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.mediaService.findOne(+id)
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMediaDto: UpdateMediaDto) {
-    return this.mediaService.update(+id, updateMediaDto)
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.mediaService.remove(+id)
   }
 }

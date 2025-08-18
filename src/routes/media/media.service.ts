@@ -1,26 +1,38 @@
-import { Injectable } from '@nestjs/common';
-import { CreateMediaDto } from './dto/create-media.dto';
-import { UpdateMediaDto } from './dto/update-media.dto';
+import { Injectable } from '@nestjs/common'
+import { S3Service } from 'src/shared/services/s3.service'
+import { unlink } from 'fs/promises'
 
 @Injectable()
 export class MediaService {
-  create(createMediaDto: CreateMediaDto) {
-    return 'This action adds a new media';
+  constructor(private readonly s3Service: S3Service) {}
+  async uploadFile(file: Express.Multer.File) {
+    const result = await this.s3Service.uploadFile({
+      fileName: 'images/' + file.filename,
+      filePath: file.path,
+      contentType: file.mimetype,
+    })
+    await unlink(file.path)
+    return result
   }
 
-  findAll() {
-    return `This action returns all media`;
-  }
+  async uploadFiles(files: Array<Express.Multer.File>) {
+    const result = await Promise.all(
+      files.map((file) => {
+        return this.s3Service
+          .uploadFile({
+            fileName: 'images/' + file.filename,
+            filePath: file.path,
+            contentType: file.mimetype,
+          })
+          ?.then((res) => {
+            return {
+              url: res.Location,
+            }
+          })
+      }),
+    )
 
-  findOne(id: number) {
-    return `This action returns a #${id} media`;
-  }
-
-  update(id: number, updateMediaDto: UpdateMediaDto) {
-    return `This action updates a #${id} media`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} media`;
+    await Promise.all(files.map((file) => unlink(file.path)))
+    return result
   }
 }

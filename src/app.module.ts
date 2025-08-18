@@ -14,7 +14,6 @@ import { ProfileModule } from './routes/profile/profile.module'
 import { MediaModule } from './routes/media/media.module'
 import { ServeStaticModule } from '@nestjs/serve-static'
 import { join } from 'path'
-console.log('>>> check path ', join(__dirname, '..', 'uploads'))
 @Module({
   imports: [
     SharedModule,
