@@ -4,25 +4,25 @@ import {
   Post,
   Param,
   UseInterceptors,
-  UploadedFile,
-  ParseFilePipe,
   FileTypeValidator,
   MaxFileSizeValidator,
   BadRequestException,
   UploadedFiles,
   Res,
   NotFoundException,
+  Body,
 } from '@nestjs/common'
 
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express'
+import { FilesInterceptor } from '@nestjs/platform-express'
 import { IsPublic } from 'src/shared/decorators/auth.decorators'
 import path from 'path'
 import { UPLOAD_PATH } from 'src/shared/constants/other.constants'
 import { Response } from 'express'
 import { MediaService } from './media.service'
+import { ParseFilePipeWithUnlink } from './parse-file-pipe'
 // import { FileSizeValidationPipe } from 'src/shared/pipes/validation-upload-file.pipe'
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_FILE_SIZE = 0.5 * 1024 * 1024 // 5MB
 export const ALLOWED_MIME = /^image\/(png|jpe?g|x-png|pjpeg)$/i
 
 @Controller('media')
@@ -38,23 +38,23 @@ export class MediaController {
   // }
 
   // Cách 2: Dùng Pipe của nestjs
-  @Post('images/upload')
-  @UseInterceptors(FileInterceptor('file'))
-  uploadFile(
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE }),
-          new FileTypeValidator({ fileType: ALLOWED_MIME, skipMagicNumbersValidation: true }),
-        ],
-        exceptionFactory: (err) =>
-          new BadRequestException(`Invalid file. Allowed: png, jpg, jpeg. Max: 5MB. Detail: ${err}`),
-      }),
-    )
-    file: Express.Multer.File,
-  ) {
-    return this.mediaService.uploadFile(file)
-  }
+  // @Post('images/upload')
+  // @UseInterceptors(FileInterceptor('file'))
+  // uploadFile(
+  //   @UploadedFile(
+  //     new ParseFilePipeWithUnlink({
+  //       validators: [
+  //         new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE }),
+  //         new FileTypeValidator({ fileType: ALLOWED_MIME, skipMagicNumbersValidation: true }),
+  //       ],
+  //       exceptionFactory: (err) =>
+  //         new BadRequestException(`Invalid file. Allowed: png, jpg, jpeg. Max: 5MB. Detail: ${err}`),
+  //     }),
+  //   )
+  //   file: Express.Multer.File,
+  // ) {
+  //   return this.mediaService.uploadFile(file)
+  // }
 
   @Post('images/upload-multiple')
   @UseInterceptors(
@@ -64,7 +64,7 @@ export class MediaController {
   )
   async uploadFiles(
     @UploadedFiles(
-      new ParseFilePipe({
+      new ParseFilePipeWithUnlink({
         validators: [
           new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE }),
           new FileTypeValidator({ fileType: ALLOWED_MIME, skipMagicNumbersValidation: true }),
@@ -87,5 +87,11 @@ export class MediaController {
         res.status(notfound.getStatus()).json(notfound.getResponse())
       }
     })
+  }
+
+  @Post('images/upload/presigned-url')
+  @IsPublic()
+  async createPresignedUrl(@Body() body: { fileName: string }) {
+    return this.mediaService.getPresignedUrl(body.fileName)
   }
 }
